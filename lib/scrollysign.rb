@@ -1,6 +1,8 @@
 require 'serialport'
 
 class ScrollySign
+  PortClosedError = Class.new(StandardError)
+
   class TextBuilder
     def initialize
       @text = ""
@@ -130,23 +132,23 @@ class ScrollySign
     "right" => '2'
   }
 
+  attr_reader :port
+  attr_accessor :type_code, :sign_address
 
   def initialize(port, baud_rate = 9600)
     @type_code = "Z" # all types of sign
     @sign_address = "00" # all signs
 
     @port = SerialPort.new(port, baud_rate)
-    if block_given?
-      begin
-        yield self
-      ensure
-        close
-      end
-    end
   end
 
-  def port
-    @port
+  def self.open(port, baud_rate = 9600)
+    sign = new(port, baud_rate)
+    begin
+      yield sign
+    ensure
+      sign.close
+    end
   end
 
   def close
@@ -183,7 +185,7 @@ class ScrollySign
   end
 
   def write_raw(command, data)
-    raise "port is closed" unless port
+    raise PortClosedError, "port is closed" unless port
 
     command_code = COMMANDS.fetch(command)
 

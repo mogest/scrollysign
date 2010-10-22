@@ -1,6 +1,6 @@
 spec = Gem::Specification.new do |s|
   s.name = 'scrollysign'
-  s.version = '1.0.0'
+  s.version = '1.0.1'
   s.summary = "Driver to write to Adaptive LED signs"
   s.description = s.summary
   s.files = [] + Dir['lib/**/*.rb']
