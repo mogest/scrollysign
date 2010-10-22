@@ -24,5 +24,5 @@ loop do
     sign.write_text(text, 'A', 'compressed_rotate')
   end
 
-  sleep 30
+  sleep 60
 end
