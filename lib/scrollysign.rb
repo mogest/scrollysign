@@ -29,6 +29,8 @@ class ScrollySign
   EOT = "\x04"
   ESC = "\x1b"
 
+  FILE_TYPES = {"text" => "A", "string" => "B", "dots_picture" => "D"}
+
   CONTROLS = {
     "enable_double_high_characters" => "\x051",
     "disable_double_high_characters" => "\x050",
@@ -82,6 +84,7 @@ class ScrollySign
 
   COMMANDS = {
     "write_text_file" => "A",
+    "special_function" => "E",
     "write_string_file" => "G"
   }
 
@@ -183,6 +186,54 @@ class ScrollySign
   def write_string(text, file_label)
     write_raw('write_string_file', "#{file_label}#{text}")
   end
+
+  # special functions
+
+  def time_of_day=(time)
+    write_raw("special_function", " #{time.strftime("%H%M")}")
+  end
+
+  def date=(date)
+    write_raw("special_function", ":#{time.strftime("%m%d%y")}")
+  end
+
+  def time=(time)
+    self.date = time
+    self.time_of_day = time
+  end
+
+  def speaker_enabled=(value)
+    write_raw("special_function", "!#{value ? "00" : "FF"}")
+  end
+
+  def allocate_memory(file_label, file_type, size, keyboard_protection = true, start_time = nil, stop_time = nil)
+    raise ArgumentError, "invalid file_type" unless FILE_TYPES.member?(file_type)
+
+    start_time_data = "%02X" % (start_time ? start_time.hour * 6 + start_time.minute / 10 : 255)
+    stop_time_data   = "%02X" % (stop_time ? stop_time.hour * 6 + stop_time.minute / 10 : 255)
+
+    write_raw("special_function", "$#{file_label}#{FILE_TYPES[file_type]}#{keyboard_protection ? "L" : "U"}#{"%04X" % size}#{start_time_data}#{stop_time_data}")
+  end
+
+  def allocate_text_memory(file_label, size, keyboard_protection = true, start_time = nil, stop_time = nil)
+    allocate_memory(file_label, "text", size, keyboard_protection, start_time, stop_time)
+  end
+
+  def allocate_string_memory(file_label, size)
+    allocate_memory(file_label, "string", size, true)
+  end
+
+  def set_run_sequence(file_labels, run_sequence_order = "T", keyboard_protection = false)
+    raise ArgumentError, "run_sequence_order must be one of T, S or D" unless %w(T S D).include?(run_sequence_order)
+
+    write_raw("special_function", ".#{run_sequence_order}#{keyboard_protection ? "L" : "U"}#{file_labels}")
+  end
+
+  def run_sequence=(file_labels)
+    set_run_sequence(file_labels)
+  end
+
+  # raw
 
   def write_raw(command, data)
     raise PortClosedError, "port is closed" unless port
